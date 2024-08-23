@@ -1,6 +1,6 @@
-Trabajo Pr ́actico 1 - Aprendizaje por Refuerzo
-Inteligencia Artificial y Neurociencias
-Segundo semestre de 2024
+# Trabajo Pr ́actico 1 - Aprendizaje por Refuerzo # 
+## Inteligencia Artificial y Neurociencias ##
+## Segundo semestre de 2024 ##
 
 El objetivo de este trabajo pr ́actico es construir un agente capaz de jugar al juego
 de dados “Diez Mil”.
@@ -11,13 +11,13 @@ imprimi-y-juga/ver/10.000.
 Jugaremos una variante con un  ́unico jugador, considerando solo las siguientes for-
 mas de sumar puntos:
 Dados Puntaje
-1 100 puntos
-5 50 puntos
-1 1 1 1.000 puntos
-# # # # ×100 puntos (ejemplos: 2 2 2 = 200 puntos; 6 6 6 = 600 puntos)
-1 2 3 4 5 6 3.000 puntos (escalera)
-3 pares 1.500 puntos (incluyendo 4 iguales y un par)
-6 iguales 10.000 puntos (termina el juego y gana)
+1 | 100 puntos
+5 | 50 puntos
+1 1 1 | 1.000 puntos
+x x x x | ×100 puntos (ejemplos: 2 2 2 = 200 puntos; 6 6 6 = 600 puntos)
+1 2 3 4 5 6 | 3.000 puntos (escalera)
+3 pares | 1.500 puntos (incluyendo 4 iguales y un par)
+6 iguales | 10.000 puntos (termina el juego y gana)
 
 Notar que en esta variante, los puntos siempre se consiguen con los nuevos dados, y
 no hay combinaci ́on o acumulaci ́on posible con los dados ya tirados.
