@@ -4,6 +4,7 @@ from collections import defaultdict
 from tqdm import tqdm
 from jugador import Jugador
 from random import randint
+import csv
 
 class AmbienteDiezMil:
     
@@ -189,9 +190,20 @@ class JugadorEntrenado(Jugador):
         """
         politica = {}
         with open(filename, 'r') as file:
-            for line in file:
-                estado, accion = line.strip().split(SEP)
-                politica[estado] = int(accion)
+            reader = csv.reader(file)
+            for row in reader:
+                if len(row) != 3:
+                    print(f"Fila con formato incorrecto: {row}")
+                    continue
+                estado_str = row[0].strip()
+                try:
+                    q_value1 = float(row[1].strip())
+                    q_value2 = float(row[2].strip())
+                    estado = eval(estado_str)  # Convertir el string a un tuple
+                    politica[estado] = [q_value1, q_value2]
+                except (ValueError, SyntaxError) as e:
+                    print(f"Error al procesar la fila: {row}. Error: {e}")
+                    continue
         return politica
     
     def jugar(

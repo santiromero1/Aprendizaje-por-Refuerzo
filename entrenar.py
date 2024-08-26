@@ -1,5 +1,5 @@
 import argparse
-from template import AmbienteDiezMil, AgenteQLearning
+from template_chat import AmbienteDiezMil, AgenteQLearning
 
 def main(episodios, verbose):
     # Crear una instancia del ambiente
