@@ -12,18 +12,24 @@ class AmbienteDiezMil:
         """Definir las variables de instancia de un ambiente.
         ¿Qué es propio de un ambiente de 10.000?
         """
-        self.reset()
+        # Puntaje acumulado en la tirada actual
+        self.puntaje_turno = 0
+        # Puntaje total acumulado en el juego
+        self.puntaje_total = 0
+        # Dados disponibles para lanzar (inicialmente 6)
+        self.dados = [1,2,3,4,5,6]
+        # Indica si el turno ha terminado
+        self.turno_terminado = False
 
     def reset(self):
         """Reinicia el ambiente para volver a realizar un episodio.
         """
-        # Reinicia el ambiente: puntaje total, puntaje del turno, dados
-        self.puntaje_total = 0
         self.puntaje_turno = 0
-        self.dados = [1, 2, 3, 4, 5, 6]  # Siempre se empieza con 6 dados
-        return self._get_estado()
+        self.dados = [1,2,3,4,5,6]
+        self.turno_terminado = False
+        return self.get_estado()
     
-    def _get_estado(self):
+    def get_estado(self):
         # Devuelve una representación del estado actual
         return (self.puntaje_total, self.puntaje_turno, tuple(self.dados))
 
@@ -41,8 +47,9 @@ class AmbienteDiezMil:
                 # Realiza una acción y devuelve la recompensa y si el turno terminó
         if accion == JUGADA_PLANTARSE:
             self.puntaje_total += self.puntaje_turno
-            self.puntaje_turno = 0
-            return self.puntaje_total, True  # Se planta, termina el turno
+            # self.puntaje_turno = 0 # PARECERIA INECESARIO
+            self.turno_terminado = True
+            return self.puntaje_total, self.turno_terminado  # Se planta, termina el turno
         
         elif accion == JUGADA_TIRAR:
             # Simular la tirada de los dados
@@ -51,31 +58,25 @@ class AmbienteDiezMil:
             
             if puntaje_tirada == 0:
                 # No suma puntos, pierde el turno
-                self.puntaje_turno = 0
-                return 0, True  # Termina el turno
+                self.puntaje_turno = 0 
+                self.turno_terminado = True
+                return self.puntaje_turno, self.turno_terminado  # Termina el turno
 
             else:
                 self.puntaje_turno += puntaje_tirada
                 self.dados = no_usados if no_usados else [1, 2, 3, 4, 5, 6]  # Volver a tirar todos si se usaron todos
-                return puntaje_tirada, False  # No termina el turno
+                self.turno_terminado = False
+                return puntaje_tirada, self.turno_terminado  # No termina el turno
 
 class EstadoDiezMil:
-    def __init__(self):
+    def __init__(self, puntaje_total, puntaje_turno=0, dados=None, turno_terminado=False):
         """Definir qué hace a un estado de diez mil.
         Recordar que la complejidad del estado repercute en la complejidad de la tabla del agente de q-learning.
         """
-        self.puntaje_total = 0
-        self.puntaje_turno = 0
-        self.dados = [1, 2, 3, 4, 5, 6]
-
-    def actualizar_estado_base(self, *args, **kwargs) -> None:
-        """Modifica las variables internas del estado luego de una tirada.
-
-        Args:
-            ... (_type_): _description_
-            ... (_type_): _description_
-        """
-        pass
+        self.puntaje_total = puntaje_total
+        self.puntaje_turno = puntaje_turno
+        self.dados = dados if dados is not None else [0, 0, 0, 0, 0, 0]
+        self.turno_terminado = turno_terminado
 
     def actualizar_estado(self, puntaje_total, puntaje_turno, dados):
         self.puntaje_total = puntaje_total
@@ -88,6 +89,7 @@ class EstadoDiezMil:
         self.puntaje_total += self.puntaje_turno
         self.puntaje_turno = 0
         self.dados = [1, 2, 3, 4, 5, 6]
+        self.turno_terminado = True
 
     def __str__(self):
         """Representación en texto de EstadoDiezMil.
@@ -105,8 +107,8 @@ class AgenteQLearning:
         alpha: float = 0.1,
         gamma: float = 0.9,
         epsilon: float = 0.1,
-        ##*args,
-        ##**kwargs
+        *args,
+        **kwargs
     ):
         """Definir las variables internas de un Agente que implementa el algoritmo de Q-Learning.
 
@@ -148,7 +150,7 @@ class AgenteQLearning:
             while not done:
                 accion = self.elegir_accion(estado)
                 recompensa, done = self.ambiente.step(accion)
-                nuevo_estado = self.ambiente._get_estado()
+                nuevo_estado = self.ambiente.get_estado()
 
                 # Q-learning update
                 max_q_nuevo_estado = max(self.q_table[nuevo_estado])
@@ -159,6 +161,7 @@ class AgenteQLearning:
                 estado = nuevo_estado
 
             if verbose:
+                print(f"Episode {episodio + 1}/{episodios} completed.")
                 print(f"Episode {episodio + 1}: Score {self.ambiente.puntaje_total}")
 
     def guardar_politica(self, filename: str):
@@ -206,6 +209,20 @@ class JugadorEntrenado(Jugador):
                     continue
         return politica
     
+        # politica = {}
+        # with open(filename, 'r') as f:
+        #     for linea in f:
+        #         partes = linea.strip().split(SEP)
+        #         estado_str = partes[0].strip()
+        #         try:
+        #             estado = eval(estado_str)  # Convertir el estado de string a tuple
+        #             acciones = list(map(float, partes[1:]))  # Convertir las acciones a floats
+        #             politica[estado] = acciones.index(max(acciones))  # Guardar la acción con el máximo valor Q
+        #         except (SyntaxError, ValueError) as e:
+        #             print(f"Error al procesar la línea: {linea}")
+        #             print(f"Detalles del error: {e}")
+        # return politica
+    
     def jugar(
         self,
         puntaje_total: int,
@@ -225,7 +242,8 @@ class JugadorEntrenado(Jugador):
         puntaje, no_usados = puntaje_y_no_usados(dados)
         estado = (puntaje_total, puntaje_turno, tuple(sorted(dados)))  # Definir el estado de manera consistente
         
-        jugada = self.politica.get(str(estado), JUGADA_TIRAR)  # Obtener la acción correspondiente
+        # jugada = self.politica[estado]
+        jugada = self.politica.get(estado, JUGADA_TIRAR)  # Obtener la acción correspondiente
         
         if jugada == JUGADA_PLANTARSE:
             return (JUGADA_PLANTARSE, [])
