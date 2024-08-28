@@ -78,10 +78,11 @@ class EstadoDiezMil:
         self.dados = dados if dados is not None else [0, 0, 0, 0, 0, 0]
         self.turno_terminado = turno_terminado
 
-    def actualizar_estado(self, puntaje_total, puntaje_turno, dados):
-        self.puntaje_total = puntaje_total
-        self.puntaje_turno = puntaje_turno
-        self.dados = dados
+    def actualizar_estado(self, nuevo_puntaje_turno, nuevos_dados):
+        """Modifica las variables internas del estado luego de una tirada.
+        """
+        self.puntaje_turno = nuevo_puntaje_turno
+        self.dados = nuevos_dados
     
     def fin_turno(self):
         """Modifica el estado al terminar el turno.
@@ -101,27 +102,19 @@ class EstadoDiezMil:
         return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}"   
 
 class AgenteQLearning:
-    def __init__(
-        self,
-        ambiente: AmbienteDiezMil,
-        alpha: float = 0.1,
-        gamma: float = 0.9,
-        epsilon: float = 0.1,
-        *args,
-        **kwargs
-    ):
-        """Definir las variables internas de un Agente que implementa el algoritmo de Q-Learning.
+    def __init__(self, ambiente: AmbienteDiezMil, alpha: float = 0.1, gamma: float = 0.9, epsilon: float = 0.1, *args, **kwargs):
+        """Inicializa un agente de Q-learning.
 
         Args:
-            ambiente (AmbienteDiezMil): Ambiente con el que interactuará el agente.
-            alpha (float): Tasa de aprendizaje.
-            gamma (float): Factor de descuento.
-            epsilon (float): Probabilidad de explorar.
+            ambiente (AmbienteDiezMil): El ambiente con el que el agente interactuará.
+            alpha (float): Tasa de aprendizaje (controla cuánto se ajustan las estimaciones de Q).
+            gamma (float): Factor de descuento (cuánto se valora la recompensa futura).
+            epsilon (float): Probabilidad de explorar (ε-greedy).
         """
-        self.ambiente = ambiente
-        self.alpha = alpha
-        self.gamma = gamma
-        self.epsilon = epsilon
+        self.ambiente = ambiente  # El entorno en el que el agente opera
+        self.alpha = alpha  # Tasa de aprendizaje
+        self.gamma = gamma  # Factor de descuento
+        self.epsilon = epsilon  # Probabilidad de exploración
         self.q_table = defaultdict(lambda: [0, 0])  # Diccionario que devuelve [Q(plantarse), Q(tirar)]
 
 
@@ -149,7 +142,7 @@ class AgenteQLearning:
             
             while not done:
                 accion = self.elegir_accion(estado)
-                recompensa, done = self.ambiente.step(accion)
+                recompensa, done = self.ambiente.step(accion) # por eso en el step devolvemos la recompensa y si termino o no
                 nuevo_estado = self.ambiente.get_estado()
 
                 # Q-learning update
