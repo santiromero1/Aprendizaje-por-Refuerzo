@@ -25,7 +25,7 @@ class AmbienteDiezMil:
         """Reinicia el ambiente para volver a realizar un episodio.
         """
         self.puntaje_turno = 0
-        self.dados = [1,2,3,4,5,6]
+        self.dados = [1,2,3,4,5,6] # habria que randomizar los dados
         self.turno_terminado = False
         return self.get_estado()
     
@@ -89,7 +89,7 @@ class EstadoDiezMil:
         """
         self.puntaje_total += self.puntaje_turno
         self.puntaje_turno = 0
-        self.dados = [1, 2, 3, 4, 5, 6]
+        self.dados = [1, 2, 3, 4, 5, 6] # habria que randomizar los dados?
         self.turno_terminado = True
 
     def __str__(self):
@@ -186,7 +186,7 @@ class JugadorEntrenado(Jugador):
         """
         politica = {}
         with open(filename, 'r') as file:
-            reader = csv.reader(file)
+            reader = csv.reader(file, delimiter=SEP)
             for row in reader:
                 if len(row) != 3:
                     print(f"Fila con formato incorrecto: {row}")
