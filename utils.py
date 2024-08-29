@@ -60,3 +60,8 @@ def separar(xs: list[int], ys: list[int]) -> list[int]:
     for y in ys:
         res.remove(y)
     return res
+
+puntaje_tirada, dados_no_usados = puntaje_y_no_usados([2,1,3,1,4,5])
+print(dados_no_usados)
+
+print(separar([2,1,3,1,4,5], dados_no_usados))

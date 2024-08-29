@@ -1,5 +1,5 @@
 import numpy as np
-from utils import puntaje_y_no_usados, JUGADA_PLANTARSE, JUGADA_TIRAR, JUGADAS_STR
+from utils import puntaje_y_no_usados, separar, JUGADA_PLANTARSE, JUGADA_TIRAR, JUGADAS_STR
 from collections import defaultdict
 from tqdm import tqdm
 from jugador import Jugador
@@ -12,28 +12,23 @@ class AmbienteDiezMil:
         """Definir las variables de instancia de un ambiente.
         ¿Qué es propio de un ambiente de 10.000?
         """
-        # Puntaje acumulado en la tirada actual
-        self.puntaje_turno = 0
-        # Puntaje total acumulado en el juego
-        self.puntaje_total = 0
-        # Dados disponibles para lanzar (inicialmente 6)
-        self.dados = [1,2,3,4,5,6]
-        # Indica si el turno ha terminado
-        self.turno_terminado = False
+        return self.reset()
 
     def reset(self):
         """Reinicia el ambiente para volver a realizar un episodio.
         """
-        self.puntaje_turno = 0
-        self.dados = [1,2,3,4,5,6] # habria que randomizar los dados
+        self.puntaje_total = 0
+        self.puntaje_turno = 0 
+        self.cantidad_turnos = 0 
+        dados_a_tirar: list[int] = [1, 2, 3, 4, 5, 6]
+        self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))]
         self.turno_terminado = False
-        return self.get_estado()
     
-    def get_estado(self):
-        # Devuelve una representación del estado actual
-        return (self.puntaje_total, self.puntaje_turno, tuple(self.dados))
+    # def get_estado(self):
+    #     # Devuelve una representación del estado actual
+    #     return (self.puntaje_total, self.puntaje_turno, tuple(self.dados))
 
-    def step(self, accion):
+    def step(self, dados, accion):
         """Dada una acción devuelve una recompensa.
         El estado es modificado acorde a la acción y su interacción con el ambiente.
         Podría ser útil devolver si terminó o no el turno.
@@ -44,38 +39,31 @@ class AmbienteDiezMil:
         Returns:
             tuple[int, bool]: Una recompensa y un flag que indica si terminó el turno. 
         """
-                # Realiza una acción y devuelve la recompensa y si el turno terminó
-        if accion == JUGADA_PLANTARSE:
-            self.puntaje_total += self.puntaje_turno
-            # self.puntaje_turno = 0 # PARECERIA INECESARIO
+
+        (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(dados)
+
+        if puntaje_tirada == 0:
+                self.turno_terminado = True
+                return self.puntaje_total, self.turno_terminado
+        
+        elif accion == JUGADA_PLANTARSE:
+            self.puntaje_total += puntaje_tirada + self.puntaje_turno
             self.turno_terminado = True
             return self.puntaje_total, self.turno_terminado  # Se planta, termina el turno
         
         elif accion == JUGADA_TIRAR:
-            # Simular la tirada de los dados
-            tirada = [randint(1, 6) for _ in range(len(self.dados))]
-            puntaje_tirada, no_usados = puntaje_y_no_usados(tirada)
-            
-            if puntaje_tirada == 0:
-                # No suma puntos, pierde el turno
-                self.puntaje_turno = 0 
-                self.turno_terminado = True
-                return self.puntaje_turno, self.turno_terminado  # Termina el turno
+            self.puntaje_turno += puntaje_tirada
+            self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))]
+            self.turno_terminado = False
 
-            else:
-                self.puntaje_turno += puntaje_tirada
-                self.dados = no_usados if no_usados else [1, 2, 3, 4, 5, 6]  # Volver a tirar todos si se usaron todos
-                self.turno_terminado = False
-                return puntaje_tirada, self.turno_terminado  # No termina el turno
-
-class EstadoDiezMil:
+class EstadoDiezMil():
     def __init__(self, puntaje_total, puntaje_turno=0, dados=None, turno_terminado=False):
         """Definir qué hace a un estado de diez mil.
         Recordar que la complejidad del estado repercute en la complejidad de la tabla del agente de q-learning.
         """
         self.puntaje_total = puntaje_total
         self.puntaje_turno = puntaje_turno
-        self.dados = dados if dados is not None else [0, 0, 0, 0, 0, 0]
+        self.dados = len(dados) if dados else 6
         self.turno_terminado = turno_terminado
 
     def actualizar_estado(self, nuevo_puntaje_turno, nuevos_dados):
