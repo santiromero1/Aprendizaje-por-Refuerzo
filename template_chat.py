@@ -49,6 +49,7 @@ class AmbienteDiezMil:
         elif accion == JUGADA_PLANTARSE:
             self.puntaje_total += puntaje_tirada + self.puntaje_turno
             self.turno_terminado = True
+            self.cantidad_turnos += 1
             return self.puntaje_total, self.turno_terminado  # Se planta, termina el turno
         
         elif accion == JUGADA_TIRAR:
@@ -56,30 +57,27 @@ class AmbienteDiezMil:
             self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))]
             self.turno_terminado = False
 
-class EstadoDiezMil():
-    def __init__(self, puntaje_total, puntaje_turno=0, dados=None, turno_terminado=False):
-        """Definir qué hace a un estado de diez mil.
-        Recordar que la complejidad del estado repercute en la complejidad de la tabla del agente de q-learning.
-        """
-        self.puntaje_total = puntaje_total
-        self.puntaje_turno = puntaje_turno
-        self.dados = len(dados) if dados else 6
-        self.turno_terminado = turno_terminado
+    # def actualizar_estado(self, nuevo_puntaje_turno, nuevos_dados):
+    #     """Modifica las variables internas del estado luego de una tirada.
 
-    def actualizar_estado(self, nuevo_puntaje_turno, nuevos_dados):
-        """Modifica las variables internas del estado luego de una tirada.
-        """
-        self.puntaje_turno = nuevo_puntaje_turno
-        self.dados = nuevos_dados
+    #     Args:
+    #         ___ (_type_): _description_
+    #         ___ (_type_): _description_
+    #     """
+    #     self.puntaje_turno = nuevo_puntaje_turno
+    #     self.dados = nuevos_dados
+
+
     
-    def fin_turno(self):
-        """Modifica el estado al terminar el turno.
-        """
-        self.puntaje_total += self.puntaje_turno
-        self.puntaje_turno = 0
-        self.dados = [1, 2, 3, 4, 5, 6] # habria que randomizar los dados?
-        self.turno_terminado = True
-
+    # def fin_turno(self):
+    #     """Modifica el estado al terminar el turno.
+    #     """
+    #     self.puntaje_total += self.puntaje_turno
+    #     self.puntaje_turno = 0
+    #     self.cantidad_turnos += 1
+    #     self.dados = [randint(1, 6) for _ in range(6)]
+    #     self.turno_terminado = False
+    
     def __str__(self):
         """Representación en texto de EstadoDiezMil.
         Ayuda a tener una versión legible del objeto.
@@ -87,7 +85,7 @@ class EstadoDiezMil():
         Returns:
             str: Representación en texto de EstadoDiezMil.
         """
-        return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}"   
+        return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}, #Turnos: {self.cantidad_turnos}"   
 
 class AgenteQLearning:
     def __init__(self, ambiente: AmbienteDiezMil, alpha: float = 0.1, gamma: float = 0.9, epsilon: float = 0.1, *args, **kwargs):
@@ -124,44 +122,150 @@ class AgenteQLearning:
             episodios (int): Cantidad de episodios a iterar.
             verbose (bool, optional): Flag para hacer visible qué ocurre en cada paso. Defaults to False.
         """
-        for episodio in tqdm(range(episodios)):
-            estado = self.ambiente.reset()
-            done = False
+        for episodio in tqdm(range(episodios), desc="Entrenando al Agente Q-Learning"):
+            # Reiniciar el ambiente al inicio de cada episodio
+            self.ambiente.reset()
             
-            while not done:
+            estado = (self.ambiente.puntaje_total, self.ambiente.puntaje_turno, tuple(self.ambiente.dados))
+            terminado = False
+
+            while not terminado:
+                # El agente selecciona una acción basado en la política epsilon-greedy
                 accion = self.elegir_accion(estado)
-                recompensa, done = self.ambiente.step(accion) # por eso en el step devolvemos la recompensa y si termino o no
-                nuevo_estado = self.ambiente.get_estado()
-
-                # Q-learning update
-                max_q_nuevo_estado = max(self.q_table[nuevo_estado])
-                self.q_table[estado][accion] += self.alpha * (
-                    recompensa + self.gamma * max_q_nuevo_estado - self.q_table[estado][accion]
-                )
-
+                
+                # Ejecutar la acción en el entorno
+                nuevo_puntaje_total, turno_terminado = self.ambiente.step(self.ambiente.dados, accion)
+                nuevo_estado = (self.ambiente.puntaje_total, self.ambiente.puntaje_turno, tuple(self.ambiente.dados))
+                
+                # Calcular la recompensa: la recompensa podría ser el cambio en el puntaje total o alguna otra función
+                recompensa = nuevo_puntaje_total - estado[0]  # Diferencia en puntaje total como recompensa
+                
+                # Actualizar la Q-table
+                accion_idx = [JUGADA_PLANTARSE, JUGADA_TIRAR].index(accion)
+                mejor_q = np.max(self.q_table[nuevo_estado])  # Valor Q máximo para el nuevo estado
+                
+                # Regla de actualización de Q-learning
+                self.q_table[estado][accion_idx] += self.alpha * (recompensa + self.gamma * mejor_q - self.q_table[estado][accion_idx])
+                
+                # Actualizar el estado actual
                 estado = nuevo_estado
+                
+                # Determinar si el turno ha terminado
+                terminado = turno_terminado
+            
+            if verbose and (episodio + 1) % 100 == 0:
+                print(f"Episodio {episodio + 1}/{episodios} completado. Puntaje Total: {self.ambiente.puntaje_total}")
 
-            if verbose:
-                print(f"Episode {episodio + 1}/{episodios} completed.")
-                print(f"Episode {episodio + 1}: Score {self.ambiente.puntaje_total}")
+    # def guardar_politica(self, filename: str):
+    #     """Almacena la política del agente en un formato conveniente.
 
+    #     Args:
+    #         filename (str): Nombre/Path del archivo a generar.
+    #     """
+    #     # Guardar la Q-table como política
+    #     with open(filename, 'w') as f:
+    #         for estado, q_values in self.q_table.items():
+    #             f.write(f"{estado},{q_values[0]},{q_values[1]}\n")
     def guardar_politica(self, filename: str):
-        """Almacena la política del agente en un formato conveniente.
+        """Almacena la política del agente en un archivo CSV.
 
         Args:
             filename (str): Nombre/Path del archivo a generar.
         """
-        # Guardar la Q-table como política
-        with open(filename, 'w') as f:
-            for estado, q_values in self.q_table.items():
-                f.write(f"{estado},{q_values[0]},{q_values[1]}\n")
+        with open(filename, 'w', newline='') as file:
+            writer = csv.writer(file)
+            # Escribir el encabezado
+            writer.writerow(['Estado', 'Accion'])
+            
+            for estado, valores_q in self.q_table.items():
+                # Determinar la acción con el valor Q más alto para el estado dado
+                mejor_accion = np.argmax(valores_q)
+                accion_str = 'Plantarse' if mejor_accion == 0 else 'Tirar'
+                # Guardar el estado y la acción
+                writer.writerow([estado, accion_str])
+
+        print(f"Política guardada en {filename}")
+
+# class JugadorEntrenado(Jugador):
+#     def __init__(self, nombre: str, filename_politica: str):
+#         self.nombre = nombre
+#         self.politica = self._leer_politica(filename_politica)
+        
+#     def _leer_politica(self, filename:str, SEP:str=','):
+#         """Carga una política entrenada con un agente de RL, que está guardada
+#         en el archivo filename en un formato conveniente.
+
+#         Args:
+#             filename (str): Nombre/Path del archivo que contiene a una política almacenada. 
+#             SEP (str): Separador de columnas en el archivo.
+        
+#         Returns:
+#             dict: Un diccionario que mapea estados del juego a acciones.
+#         """
+#         politica = {}
+#         with open(filename, 'r') as file:
+#             reader = csv.reader(file, delimiter=SEP)
+#             for row in reader:
+#                 if len(row) != 3:
+#                     print(f"Fila con formato incorrecto: {row}")
+#                     continue
+#                 estado_str = row[0].strip()
+#                 try:
+#                     q_value1 = float(row[1].strip())
+#                     q_value2 = float(row[2].strip())
+#                     estado = eval(estado_str)  # Convertir el string a un tuple
+#                     politica[estado] = [q_value1, q_value2]
+#                 except (ValueError, SyntaxError) as e:
+#                     print(f"Error al procesar la fila: {row}. Error: {e}")
+#                     continue
+#         return politica
+    
+    
+#     def jugar(
+#         self,
+#         puntaje_total: int,
+#         puntaje_turno: int,
+#         dados: list[int],
+#     ) -> tuple[int, list[int]]:
+#         """Devuelve una jugada y los dados a tirar.
+
+#         Args:
+#             puntaje_total (int): Puntaje total del jugador en la partida.
+#             puntaje_turno (int): Puntaje en el turno del jugador.
+#             dados (list[int]): Tirada del turno.
+
+#         Returns:
+#             tuple[int, list[int]]: Una jugada y la lista de dados a tirar.
+#         """
+#         puntaje, no_usados = puntaje_y_no_usados(dados)
+#         estado = (puntaje_total, puntaje_turno, tuple(sorted(dados)))  # Definir el estado de manera consistente
+        
+#         # jugada = self.politica[estado]
+#         jugada = self.politica.get(estado, JUGADA_TIRAR)  # Obtener la acción correspondiente
+        
+#         if jugada == JUGADA_PLANTARSE:
+#             return (JUGADA_PLANTARSE, [])
+#         elif jugada == JUGADA_TIRAR:
+#             return (JUGADA_TIRAR, no_usados)
+        
+#         ## COMENTARIOS DE LA BASE ##
+#         # puntaje, no_usados = puntaje_y_no_usados(dados)
+#         # COMPLETAR
+#         # estado = ...
+#         # jugada = self.politica[estado]
+       
+#         # if jugada==JUGADA_PLANTARSE:
+#         #     return (JUGADA_PLANTARSE, [])
+#         # elif jugada==JUGADA_TIRAR:
+#         #     return (JUGADA_TIRAR, no_usados)
+
 
 class JugadorEntrenado(Jugador):
     def __init__(self, nombre: str, filename_politica: str):
         self.nombre = nombre
         self.politica = self._leer_politica(filename_politica)
         
-    def _leer_politica(self, filename:str, SEP:str=','):
+    def _leer_politica(self, filename: str, SEP: str = ','):
         """Carga una política entrenada con un agente de RL, que está guardada
         en el archivo filename en un formato conveniente.
 
@@ -175,34 +279,20 @@ class JugadorEntrenado(Jugador):
         politica = {}
         with open(filename, 'r') as file:
             reader = csv.reader(file, delimiter=SEP)
+            next(reader)  # Omitir el encabezado
             for row in reader:
-                if len(row) != 3:
+                if len(row) != 2:
                     print(f"Fila con formato incorrecto: {row}")
                     continue
-                estado_str = row[0].strip()
+                estado_str, accion_str = row
                 try:
-                    q_value1 = float(row[1].strip())
-                    q_value2 = float(row[2].strip())
                     estado = eval(estado_str)  # Convertir el string a un tuple
-                    politica[estado] = [q_value1, q_value2]
+                    accion = 0 if accion_str.strip() == 'Plantarse' else 1
+                    politica[estado] = accion
                 except (ValueError, SyntaxError) as e:
                     print(f"Error al procesar la fila: {row}. Error: {e}")
                     continue
         return politica
-    
-        # politica = {}
-        # with open(filename, 'r') as f:
-        #     for linea in f:
-        #         partes = linea.strip().split(SEP)
-        #         estado_str = partes[0].strip()
-        #         try:
-        #             estado = eval(estado_str)  # Convertir el estado de string a tuple
-        #             acciones = list(map(float, partes[1:]))  # Convertir las acciones a floats
-        #             politica[estado] = acciones.index(max(acciones))  # Guardar la acción con el máximo valor Q
-        #         except (SyntaxError, ValueError) as e:
-        #             print(f"Error al procesar la línea: {linea}")
-        #             print(f"Detalles del error: {e}")
-        # return politica
     
     def jugar(
         self,
@@ -221,23 +311,12 @@ class JugadorEntrenado(Jugador):
             tuple[int, list[int]]: Una jugada y la lista de dados a tirar.
         """
         puntaje, no_usados = puntaje_y_no_usados(dados)
-        estado = (puntaje_total, puntaje_turno, tuple(sorted(dados)))  # Definir el estado de manera consistente
+        estado = (puntaje_turno, tuple(sorted(dados)))  # Definir el estado de manera consistente
         
-        # jugada = self.politica[estado]
-        jugada = self.politica.get(estado, JUGADA_TIRAR)  # Obtener la acción correspondiente
+        # Obtener la jugada correspondiente al estado actual
+        jugada = self.politica.get(estado, JUGADA_TIRAR)  # Por defecto, tirar si el estado no está en la política
         
-        if jugada == JUGADA_PLANTARSE:
+        if jugada == 0:  # JUGADA_PLANTARSE
             return (JUGADA_PLANTARSE, [])
-        elif jugada == JUGADA_TIRAR:
+        elif jugada == 1:  # JUGADA_TIRAR
             return (JUGADA_TIRAR, no_usados)
-        
-        ## COMENTARIOS DE LA BASE ##
-        # puntaje, no_usados = puntaje_y_no_usados(dados)
-        # COMPLETAR
-        # estado = ...
-        # jugada = self.politica[estado]
-       
-        # if jugada==JUGADA_PLANTARSE:
-        #     return (JUGADA_PLANTARSE, [])
-        # elif jugada==JUGADA_TIRAR:
-        #     return (JUGADA_TIRAR, no_usados)
