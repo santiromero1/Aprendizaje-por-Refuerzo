@@ -6,7 +6,7 @@ from jugador import Jugador
 from random import randint
 import csv
 
-# episodio = un juego entero de diezmil
+# episodio = un juego entero de diezmil (con reset() se reinicia el juego)
 # estado = es un turno dentro del juego
 # step = una tirada de dados
 
@@ -23,47 +23,26 @@ class AmbienteDiezMil:
         """
         self.puntaje_total = 0
         self.cantidad_turnos = 0
-        self.puntaje_turno = 0  
-        dados_a_tirar: list[int] = [1, 2, 3, 4, 5, 6]
-        self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))]
-        self.turno_terminado = False
     
     # def get_estado(self):
     #     # Devuelve una representación del estado actual
     #     return (self.puntaje_total, self.puntaje_turno, tuple(self.dados))
 
-class EstadoDiezMil:
-    def __init__(self, puntaje_total: int, puntaje_turno: int, dados: list[int], cantidad_turnos: int):
-
-        self.puntaje_total = puntaje_total
-        self.cantidad_turnos = cantidad_turnos
-        self.puntaje_turno = 0  
-        dados_a_tirar: list[int] = [1, 2, 3, 4, 5, 6]
-        self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))]
-        self.turno_terminado = False
-
-    def actualizar_estado(self, puntaje_total, cantidad_turnos):
-        """Modifica las variables internas del estado luego de una tirada.
-        Args:
-            ___ (_type_): _description_
-            ___ (_type_): _description_
+class EstadoDiezMil(AmbienteDiezMil):
+    def __init__(self):
+        """Inicializa un estado de DiezMil, es decir, un turno. 
         """
-        estado = (self.puntaje_total, self.puntaje_turno, tuple(self.dados), self.cantidad_turnos)
-        return estado
-        self.puntaje_total = puntaje_total
-        self.puntaj_turnos = cantidad_turnos
-        self.cantidad_turnos += 1
+        return self.reset_turno()
 
-    def fin_turno(self):
+    def reset_turno(self):
         """Modifica el estado al terminar el turno.
         """
-        self.puntaje_total += self.puntaje_turno
         self.puntaje_turno = 0
         self.cantidad_turnos += 1
         self.dados = [randint(1, 6) for _ in range(6)]
         self.turno_terminado = False
 
-    def step(self, dados, accion): # por tirada
+    def step(self, accion): # por tirada
         """Dada una acción devuelve una recompensa.
         El estado es modificado acorde a la acción y su interacción con el ambiente.
         Podría ser útil devolver si terminó o no el turno.
@@ -74,22 +53,30 @@ class EstadoDiezMil:
         Returns:
             tuple[int, bool]: Una recompensa y un flag que indica si terminó el turno. 
         """
-        (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(dados)
+        reward = 0 # recompensa por tirada, lo queremos usar para que el agente aprenda
+        (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(self.dados)
 
         if puntaje_tirada == 0:
-                self.turno_terminado = True
-                return self.puntaje_total, self.turno_terminado
+            reward = -1
+            self.reset_turno()
         
         elif accion == JUGADA_TIRAR:
             self.puntaje_turno += puntaje_tirada
             self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))]
             self.turno_terminado = False
+            reward = 1
+            if len(dados_a_tirar) <= 2: # Penalización si sigue tirando con pocos dados (ej. <= 2 dados)
+                reward = -0.5
 
         elif accion == JUGADA_PLANTARSE or len(dados_a_tirar) == 0:
             self.puntaje_total += puntaje_tirada + self.puntaje_turno
-            self.turno_terminado = True
-            self.cantidad_turnos += 1
-            return self.puntaje_total, self.turno_terminado
+
+            if self.puntaje_turno >= 300:
+                reward = 1  # Recompensa positiva por tomar una decisión segura
+
+            self.reset_turno()
+
+        return reward
     
     def __str__(self):
         """Representación en texto de EstadoDiezMil.
@@ -101,7 +88,7 @@ class EstadoDiezMil:
         return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}, #Turnos: {self.cantidad_turnos}"   
 
 class AgenteQLearning:
-    def __init__(self, ambiente: AmbienteDiezMil, alpha: float = 0.1, gamma: float = 0.9, epsilon: float = 0.1, *args, **kwargs):
+    def __init__(self, ambiente: AmbienteDiezMil, estado:EstadoDiezMil, *args, **kwargs):
         """Inicializa un agente de Q-learning.
 
         Args:
@@ -111,22 +98,22 @@ class AgenteQLearning:
             epsilon (float): Probabilidad de explorar (ε-greedy).
         """
         self.ambiente = ambiente  # El entorno en el que el agente opera
-        self.estado = EstadoDiezMil(0, 0, [], 0)
-        self.alpha = alpha  # Tasa de aprendizaje
-        self.gamma = gamma  # Factor de descuento
-        self.epsilon = epsilon  # Probabilidad de exploración
-        self.q_table = defaultdict(lambda: [0, 0])  # Diccionario que devuelve [Q(plantarse), Q(tirar)]
+        self.estado = estado
+        self.alpha = 0.1  # Tasa de aprendizaje
+        self.gamma = 0.9  # Factor de descuento
+        self.epsilon = 0.1  # Probabilidad de exploración
+        self.q_table = defaultdict(lambda: [0.0, 0.0])  # Diccionario que tenga estado.dados como key y valor Q para tirar y plantarse como value
 
-
-    def elegir_accion(self, estado):
+    def elegir_accion(self, dados):
         """Selecciona una acción de acuerdo a una política ε-greedy.
         """
         if np.random.rand() < self.epsilon:
             # Explorar: elige una acción aleatoria
-            return np.random.choice([JUGADA_PLANTARSE, JUGADA_TIRAR])
+            accion = np.random.choice([JUGADA_PLANTARSE, JUGADA_TIRAR])
+            return int(accion)
         else:
             # Explotar: elige la mejor acción según la Q-table
-            return np.argmax(self.q_table[estado])
+            return np.argmax(self.q_table[str(dados)])
 
     def entrenar(self, episodios: int, verbose: bool = False) -> None:
         """Dada una cantidad de episodios, se repite el ciclo del algoritmo de Q-learning.
@@ -138,14 +125,14 @@ class AgenteQLearning:
         """
         for episodios in tqdm(range(episodios), desc="Entrenando al Agente Q-Learning"):
             self.ambiente.reset()
-            if self.estado.puntaje_total <= 10000:
-                estado = (self.ambiente.puntaje_total, self.ambiente.puntaje_turno, tuple(self.ambiente.dados))
-                terminado = False
+            if self.ambiente.puntaje_total <= 10000:
+                self.turno_terminado = False
 
                 while not terminado:
                     # El agente selecciona una acción basado en la política epsilon-greedy
                     accion = self.elegir_accion(estado)
-                    
+                    reward = estado.step(accion)
+
                     # Ejecutar la acción en el entorno
                     nuevo_puntaje_total, turno_terminado = self.ambiente.step(self.ambiente.dados, accion)
                     nuevo_estado = (self.ambiente.puntaje_total, self.ambiente.puntaje_turno, tuple(self.ambiente.dados))
