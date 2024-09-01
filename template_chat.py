@@ -40,7 +40,7 @@ class EstadoDiezMil(AmbienteDiezMil):
         self.dados = [randint(1, 6) for _ in range(6)]
         self.turno_terminado = False
 
-    def step(self, accion): # por tirada
+    def step(self, dados, accion): # por tirada
         """Dada una acción devuelve una recompensa.
         El estado es modificado acorde a la acción y su interacción con el ambiente.
         Podría ser útil devolver si terminó o no el turno.
@@ -52,8 +52,9 @@ class EstadoDiezMil(AmbienteDiezMil):
             tuple[int, bool]: Una recompensa y un flag que indica si terminó el turno. 
         """
         reward = 0 # recompensa por tirada, lo queremos usar para que el agente aprenda
-        (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(self.dados)
-
+        (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(dados)
+        print(dados)
+        print(dados_a_tirar)
         if puntaje_tirada == 0:
             reward = -1
             self.reset_turno()
@@ -61,20 +62,23 @@ class EstadoDiezMil(AmbienteDiezMil):
         
         elif accion == JUGADA_TIRAR:
             self.puntaje_turno += puntaje_tirada
-            self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))] 
+            dados = [randint(1, 6) for _ in range(len(dados_a_tirar))] 
             self.turno_terminado = False
             reward = 1
             if len(dados_a_tirar) <= 2: # Penalización si sigue tirando con pocos dados (ej. <= 2 dados)
                 reward = -0.5
 
         elif accion == JUGADA_PLANTARSE or len(dados_a_tirar) == 0:
-            self.puntaje_total += puntaje_tirada + self.puntaje_turno
+            self.puntaje_turno += puntaje_tirada
+            self.puntaje_total += self.puntaje_turno
+            if len(dados_a_tirar) >= 3: # Penalización si sigue tirando con pocos dados (ej. <= 2 dados)
+                reward = -0.5
 
             if self.puntaje_turno >= 300:
                 reward = 1  # Recompensa positiva por tomar una decisión segura
             self.turno_terminado = True
-
-        return reward
+        print(puntaje_tirada, self.puntaje_turno)
+        return reward, dados
     
     def __str__(self):
         """Representación en texto de EstadoDiezMil.
@@ -108,22 +112,41 @@ class AgenteQLearning:
     def entrenar(self, episodios: int, verbose: bool = False) -> None:
         """Dada una cantidad de episodios (cantidad de juegos diezmil),
            se repite el ciclo del algoritmo de Q-learning."""
-        
+        episodio = 0
         for episodio in tqdm(range(episodios), desc="Entrenando al Agente Q-Learning"):
             self.ambiente.reset()
+            episodio += 1
             while self.ambiente.puntaje_total <= 10000:
+                tirada = 0
                 while not self.estado.turno_terminado: # mientras no haya terminado el turno (turno_terinado = False)
+                    tirada += 1
                     accion = self.elegir_accion(self.estado.dados) # 1(TIRAR) o 0(PLANTARSE)
-                    dados= self.estado.dados # Guardar los dados 
-                    reward = self.estado.step(accion) # Realizar la acción y obtener la recompensa
-                    
-                    max_q = np.max(self.q_table[tuple(dados)]) # guarda la maxima recompensa entre las acciones (tirar, plantarse)
+                    dados = self.estado.dados # Guardar los dados 
+                    print(type(dados))
+                    reward, dados_nuevos = self.estado.step(accion, dados) # Realizar la acción y obtener la recompensa
+
+                    print(f"Episodio: {episodio}")
+                    # print(f"q_table_vieja: {self.q_table[tuple(dados)]}")
+
+                    max_q = float(np.max(self.q_table[tuple(dados_nuevos)])) # guarda la maxima recompensa entre las acciones (tirar, plantarse)
                     self.q_table[tuple(dados)][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[tuple(dados)][accion])
                     
+                    print(f"Turnos: {self.estado.cantidad_turnos}")
+                    print(f"Tirada: {tirada}")
+                    print(f"Dados: {dados}")
+                    print(f"Accion: {JUGADAS_STR[accion]}")
+                    print(f"reward: {reward}")
+                    # print(f"q_table: {self.q_table[tuple(dados)]}")
+                    print(f"Puntaje de Turno: {self.estado.puntaje_turno}")
+                    # print(f"Puntaje Total: {self.ambiente.puntaje_total}")
+
                 self.estado.reset_turno()
+
                 
-                if verbose and (episodio + 1) % 100 == 0:
-                    print(f"Episodio {episodio + 1}/{episodios} completado. Puntaje Total: {self.ambiente.puntaje_total}")
+                
+                
+            if verbose and (episodio + 1) % 100 == 0:
+                print(f"Episodio {episodio + 1}/{episodios} completado. Puntaje Total: {self.ambiente.puntaje_total}")
 
             # Guardar la información en un archivo CSV
             self.log_accion(episodio + 1, self.ambiente.cantidad_turnos, dados, self.estado.puntaje_turno, self.ambiente.puntaje_total, accion)
@@ -140,11 +163,10 @@ class AgenteQLearning:
             writer = csv.writer(file)
             writer.writerow(['Estado Dados', 'Q(Tirar)', 'Q(Plantarse)'])
             
-            for estado, valores_q in self.q_table.items():
-                writer.writerow([estado, valores_q[0], valores_q[1]])
+            for dados, valores_q in self.q_table.items():
+                writer.writerow([dados, valores_q[0], valores_q[1]])
 
         print(f"Política guardada en {filename}")
-
 
 class JugadorEntrenado(Jugador):
     def __init__(self, nombre: str, filename_politica: str):
@@ -199,8 +221,4 @@ class JugadorEntrenado(Jugador):
 
 
 
-    # print(f"Episodio: {episodio + 1}, Turno: {self.estado.cantidad_turnos}")
-                    # print(f"Dados: {dados_usados_accion}")
-                    # print(f"Puntaje de Tirada: {self.estado.puntaje_turno}")
-                    # print(f"Puntaje Total: {self.ambiente.puntaje_total}")
-                    # print(f"Acción: {JUGADAS_STR[accion]}")
+    
