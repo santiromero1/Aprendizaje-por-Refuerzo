@@ -19,8 +19,6 @@ class AmbienteDiezMil:
         self.puntaje_total = 0
         self.cantidad_turnos = 0
     
-        return self.reset()
-
     def reset(self): # por turno
         """Reinicia el ambiente para volver a realizar un episodio.
         """
@@ -31,8 +29,9 @@ class EstadoDiezMil(AmbienteDiezMil):
     def __init__(self):
         """Inicializa un estado de DiezMil, es decir, un turno."""
         super().__init__()  # Llama al constructor de la clase padre
+        self.puntaje_turno = 0
         self.dados = [randint(1, 6) for _ in range(6)]  # Inicializa los dados para este turno
-        self.reset_turno()
+        self.turno_terminado = False
 
     def reset_turno(self):
         """Modifica el estado al terminar el turno."""
@@ -87,61 +86,48 @@ class EstadoDiezMil(AmbienteDiezMil):
         return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}, #Turnos: {self.cantidad_turnos}"   
 
 class AgenteQLearning:
-    def __init__(self, ambiente: AmbienteDiezMil, estado: EstadoDiezMil, *args, **kwargs):
+    def __init__(self, ambiente: AmbienteDiezMil, *args, **kwargs):
         """Inicializa un agente de Q-learning."""
         self.ambiente = ambiente
-        self.estado = estado()
+        self.estado = EstadoDiezMil()
         self.alpha = 0.1
         self.gamma = 0.9
         self.epsilon = 0.1
         self.q_table = defaultdict(lambda: [0.0, 0.0])
-        self.log_file = "acciones_log.csv"  # Archivo para registrar las acciones y estados
-
-        # Inicializar el archivo de log
-        with open(self.log_file, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Episodio', 'Turno', 'Dados', 'Puntaje de Tirada', 'Puntaje Total', 'Acción'])
-
+        self.log_file = 'acciones_qlearning.csv'
+    
     def elegir_accion(self, dados):
         """Selecciona una acción de acuerdo a una política ε-greedy."""
         if np.random.rand() < self.epsilon:
-            accion = np.random.choice([JUGADA_PLANTARSE, JUGADA_TIRAR])
+            accion = np.random.choice([JUGADA_PLANTARSE, JUGADA_TIRAR]) # random entre 0 o 1
             return [JUGADA_PLANTARSE, JUGADA_TIRAR].index(accion)
         else:
-            return np.argmax(self.q_table[tuple(dados)])
-
+            return np.argmax(self.q_table[tuple(dados)]) # accede a los valores de Q almacenados para dados y devuelve el reward maximo entre las dos acciones
+                                                         # si los dos valores son iguales, devuelve 0 (plantarse)
+                                                         
     def entrenar(self, episodios: int, verbose: bool = False) -> None:
-        """Dada una cantidad de episodios, se repite el ciclo del algoritmo de Q-learning."""
+        """Dada una cantidad de episodios (cantidad de juegos diezmil),
+           se repite el ciclo del algoritmo de Q-learning."""
+        
         for episodio in tqdm(range(episodios), desc="Entrenando al Agente Q-Learning"):
             self.ambiente.reset()
-            if self.estado.puntaje_total <= 10000:
-                while not self.estado.turno_terminado:
-                    # El agente selecciona una acción basado en la política epsilon-greedy
-                    accion = self.elegir_accion(self.estado.dados)
-                    dados_usados_accion = self.estado.dados
-                    reward = self.estado.step(accion)
+            while self.ambiente.puntaje_total <= 10000:
+                while not self.estado.turno_terminado: # mientras no haya terminado el turno (turno_terinado = False)
+                    accion = self.elegir_accion(self.estado.dados) # 1(TIRAR) o 0(PLANTARSE)
+                    dados= self.estado.dados # Guardar los dados 
+                    reward = self.estado.step(accion) # Realizar la acción y obtener la recompensa
                     
-                    # Escribir la q_table
-                    mejor_q = np.max(self.q_table[tuple(dados_usados_accion)])
-                    self.q_table[tuple(dados_usados_accion)][accion] += self.alpha * (
-                        reward + self.gamma * mejor_q - self.q_table[tuple(dados_usados_accion)][accion]
-                    )
+                    max_q = np.max(self.q_table[tuple(dados)]) # guarda la maxima recompensa entre las acciones (tirar, plantarse)
+                    self.q_table[tuple(dados)][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[tuple(dados)][accion])
                     
-                    # Imprimir información del estado
-                    print(f"Episodio: {episodio + 1}, Turno: {self.estado.cantidad_turnos}")
-                    print(f"Dados: {dados_usados_accion}")
-                    print(f"Puntaje de Tirada: {self.estado.puntaje_turno}")
-                    print(f"Puntaje Total: {self.ambiente.puntaje_total}")
-                    print(f"Acción: {JUGADAS_STR[accion]}")
-                    
-                    # Guardar la información en un archivo CSV
-                    self.log_accion(episodio + 1, self.ambiente.cantidad_turnos, dados_usados_accion, self.estado.puntaje_turno, self.ambiente.puntaje_total, accion)
-                
                 self.estado.reset_turno()
-
+                
                 if verbose and (episodio + 1) % 100 == 0:
                     print(f"Episodio {episodio + 1}/{episodios} completado. Puntaje Total: {self.ambiente.puntaje_total}")
 
+            # Guardar la información en un archivo CSV
+            self.log_accion(episodio + 1, self.ambiente.cantidad_turnos, dados, self.estado.puntaje_turno, self.ambiente.puntaje_total, accion)
+                
     def log_accion(self, episodio, turno, dados, puntaje_tirada, puntaje_total, accion):
         """Guarda la acción realizada en un archivo CSV."""
         with open(self.log_file, 'a', newline='') as file:
@@ -203,3 +189,18 @@ class JugadorEntrenado(Jugador):
             int: La acción a tomar, 0 para tirar, 1 para plantarse.
         """
         return self.politica.get(estado, 0)  # Por defecto, tirar si el estado no está en la política
+    
+
+
+
+
+
+
+
+
+
+    # print(f"Episodio: {episodio + 1}, Turno: {self.estado.cantidad_turnos}")
+                    # print(f"Dados: {dados_usados_accion}")
+                    # print(f"Puntaje de Tirada: {self.estado.puntaje_turno}")
+                    # print(f"Puntaje Total: {self.ambiente.puntaje_total}")
+                    # print(f"Acción: {JUGADAS_STR[accion]}")
