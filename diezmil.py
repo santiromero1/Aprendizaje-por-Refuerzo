@@ -38,6 +38,8 @@ class JuegoDiezMil:
 
                 else:
                     # Bien, suma puntos. Preguntamos al jugador qué quiere hacer.
+                    # print(dados)
+                    # print(type(dados))
                     jugada, dados_a_tirar = self.jugador.jugar(puntaje_total, puntaje_turno, dados)
 
                     if jugada == JUGADA_PLANTARSE:
