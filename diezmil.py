@@ -1,7 +1,7 @@
 from random import randint
 from utils import puntaje_y_no_usados, separar, JUGADA_PLANTARSE, JUGADA_TIRAR
 from jugador import Jugador, JugadorAleatorio, JugadorSiempreSePlanta
-from template_chat import JugadorEntrenado
+from modelo_agente import JugadorEntrenado
 
 class JuegoDiezMil:
     def __init__(self, jugador: Jugador):
@@ -62,24 +62,3 @@ class JuegoDiezMil:
             msg += ' --> ' + str(puntaje_turno) + ' puntos. TOTAL: ' + str(puntaje_total)
             if verbose: print(msg)
         return (turno, puntaje_total)
-
-
-def main():
-    jugador = JugadorAleatorio('random')
-    juego = JuegoDiezMil(jugador)
-    (cantidad_turnos, puntaje_final) = juego.jugar(verbose=True)
-    print(jugador.nombre, cantidad_turnos, puntaje_final)
-
-    jugador = JugadorSiempreSePlanta('plantón')
-    juego = JuegoDiezMil(jugador)
-    (cantidad_turnos, puntaje_final) = juego.jugar(verbose=True)
-    print(jugador.nombre, cantidad_turnos, puntaje_final)
-
-    jugador = JugadorEntrenado('entrenado', 'politica_10000.csv')
-    juego = JuegoDiezMil(jugador)
-    (cantidad_turnos, puntaje_final) = juego.jugar(verbose=True)
-    print(jugador.nombre, cantidad_turnos, puntaje_final)
-
-
-if __name__ == '__main__':
-    main()

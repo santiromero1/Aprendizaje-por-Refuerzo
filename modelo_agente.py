@@ -5,6 +5,7 @@ from tqdm import tqdm
 from jugador import Jugador
 from random import randint
 import csv
+from collections import Counter
 
 # episodio = un juego entero de diezmil (con reset() se reinicia el juego)
 # estado = es un turno dentro del juego
@@ -54,7 +55,8 @@ class EstadoDiezMil(AmbienteDiezMil):
         reward = 0 # recompensa por tirada, lo queremos usar para que el agente aprenda
         (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(dados)
         if puntaje_tirada == 0:
-            reward = -1
+            if accion == JUGADA_TIRAR: #penalizar fuerte si decidio tirar y quedo BUSTED
+                reward += -3 
             self.reset_turno()
             self.turno_terminado = True
         
@@ -62,23 +64,38 @@ class EstadoDiezMil(AmbienteDiezMil):
             self.puntaje_turno += puntaje_tirada
             dados = [randint(1, 6) for _ in range(len(dados_a_tirar))] 
             self.turno_terminado = False
-            reward = 1
-            if len(dados_a_tirar) <= 2: # Penalización si sigue tirando con pocos dados (ej. <= 2 dados)
-                reward = -0.5
-            elif len(dados_a_tirar) >= 4:
-                reward = 0.5
+            reward += 1
+            if len(dados_a_tirar) <= 2: # Penalización si sigue tirando con pocos dados 
+                reward += -2
+            elif len(dados_a_tirar) >= 4:# felicitar si tiro cuando tenia muchos dados 
+                reward += 6
+            if self.puntaje_turno <= 200:
+                reward += 3
 
         elif accion == JUGADA_PLANTARSE or len(dados_a_tirar) == 0:
-            self.puntaje_turno += puntaje_tirada
-            self.puntaje_total += self.puntaje_turno
-            if len(dados_a_tirar) >= 3: # Penalización si sigue tirando con pocos dados (ej. <= 2 dados)
-                reward = -0.5
-                if(self.puntaje_turno <= 200):
-                    reward = -1
-
-            if self.puntaje_turno >= 300:
-                reward = 1  # Recompensa positiva por tomar una decisión segura
-            self.turno_terminado = True
+                self.puntaje_turno += puntaje_tirada
+                self.puntaje_total += self.puntaje_turno
+                
+                # Felicitar si en dados habían 3 iguales, si eran 3 unos felicitar más
+                contador_dados = Counter(dados)
+                for valor, cantidad in contador_dados.items():
+                    if cantidad == 3:  # Si hay 3 o más dados iguales
+                        if valor == 1:
+                            reward += 10  # Recompensa mayor si son tres unos (si o si me planto con 1000)
+                        else:
+                            reward += 3  # Recompensa estándar por 3 dados iguales
+                        break  # Solo contar una vez la primera combinación de 3 iguales
+                    elif cantidad >= 3:
+                        reward += 5  # Recompensa por tener 3 o más dados iguales
+                if len(dados_a_tirar) >= 3:  # Penalizar si tenía más de 3 dados y se quedó
+                    reward += -1
+                    if self.puntaje_turno <= 200:  # Penalizar si se quedó y tenía pocos puntos 
+                        reward += -2
+                    elif self.puntaje_turno >= 300:
+                        reward += 2  # Recompensa positiva por tomar una decisión segura
+                
+                self.turno_terminado = True
+            
         return reward, dados
     
     def __str__(self):
