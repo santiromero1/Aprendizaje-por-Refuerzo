@@ -81,12 +81,12 @@ class EstadoDiezMil(AmbienteDiezMil):
                 for valor, cantidad in contador_dados.items():
                     if cantidad == 3:  # Si hay 3 o más dados iguales
                         if valor == 1:
-                            reward += 10  # Recompensa mayor si son tres unos (si o si me planto con 1000)
+                            reward += 7  # Recompensa mayor si son tres unos (si o si me planto con 1000)
                         else:
                             reward += 3  # Recompensa estándar por 3 dados iguales
                         break  # Solo contar una vez la primera combinación de 3 iguales
-                    elif cantidad >= 3:
-                        reward += 5  # Recompensa por tener 3 o más dados iguales
+                    elif cantidad > 3:
+                        reward += 10  # Recompensa por tener 3 o más dados iguales
                 if len(dados_a_tirar) >= 3:  # Penalizar si tenía más de 3 dados y se quedó
                     reward += -1
                     if self.puntaje_turno <= 200:  # Penalizar si se quedó y tenía pocos puntos 
@@ -112,9 +112,10 @@ class AgenteQLearning:
         """Inicializa un agente de Q-learning."""
         self.ambiente = ambiente
         self.estado = EstadoDiezMil()
-        self.alpha = 0.1 #nose?
-        self.gamma = 0.9 #tiene muy en cuenta el rweard de haber hecho dicha accion
+        self.alpha = 0.1 # nose?
+        self.gamma = 0.9 # tiene muy en cuenta el rweard de haber hecho dicha accion
         self.epsilon = 0.1 #10% veces va a hacer random
+        self.epsilon_decay = 0.999 # va a ir disminuyendo el epsilon
         self.q_table = defaultdict(lambda: [0.0, 0.0])
     
     def elegir_accion(self, dados):
@@ -159,7 +160,7 @@ class AgenteQLearning:
 
                     self.estado.dados = dados_nuevos
                 self.estado.reset_turno()
-                
+            self.epsilon *= self.epsilon_decay
             if verbose and (episodio + 1) % 100 == 0:
                 print(f"Episodio {episodio + 1}/{episodios} completado. Puntaje Total: {self.ambiente.puntaje_total}")
                 

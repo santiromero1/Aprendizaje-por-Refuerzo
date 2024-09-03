@@ -2,7 +2,7 @@ import argparse
 from diezmil import JuegoDiezMil
 from jugador import Jugador, JugadorAleatorio, JugadorSiempreSePlanta
 from modelo_agente import JugadorEntrenado
-
+import matplotlib.pyplot as plt
 
 def jugar_partidas(jugador, num_juegos=100, verbose=False):
     aux_cant_turnos = 0
@@ -15,29 +15,41 @@ def jugar_partidas(jugador, num_juegos=100, verbose=False):
     return promedio_turnos
 
 def main():
-    num_juegos = 1000
+    # Lista de episodios para los diferentes archivos
+    episodios = [10, 50, 100, 200, 500, 1000, 5000, 10000, 50000, 75000, 100000]
 
-    # Jugador Aleatorio
-    jugador_random = JugadorAleatorio('random')
-    promedio_random = jugar_partidas(jugador_random, num_juegos, verbose=False)
+    # Número de juegos a jugar
+    num_juegos = 1000  # Ajusta este valor según lo necesites
 
-    # Jugador que Siempre se Planta
-    jugador_planton = JugadorSiempreSePlanta('planton')
-    promedio_planton = jugar_partidas(jugador_planton, num_juegos, verbose=False)
+    # Listas para almacenar los resultados
+    x_values = []
+    y_values = []
 
-    # Jugador Entrenado
-    jugador_entrenado = JugadorEntrenado('QLearn_100.000eps', 'politica_100000.csv')
-    promedio_entrenado = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
+    # Itera sobre la lista de episodios
+    for episodio in episodios:
+        nombre = f'agente_{episodio}eps'
+        archivo = f'politica_{episodio}.csv'
 
-    # Jugador Entrenado
-    jugador_entrenado = JugadorEntrenado('QLearn_10.000eps', 'politica_10000.csv')
-    promedio_entrenado = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
+        # Jugador Entrenado
+        jugador_entrenado = JugadorEntrenado(nombre, archivo)
+        promedio_entrenado = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
 
-    # # Imprimir resultados finales
-    # print(f'Promedio de turnos para {num_juegos} juegos:')
-    # print(f'{jugador_random.nombre}: {promedio_random}')
-    # print(f'{jugador_planton.nombre}: {promedio_planton}')
-    # print(f'{jugador_entrenado.nombre}: {promedio_entrenado}')
+        # Guarda los valores para el plot
+        x_values.append(episodio * 1000)  # Para representar la cantidad real de episodios
+        y_values.append(promedio_entrenado)
+
+    # Plotear los resultados
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_values, y_values, marker='o', linestyle='-', color='b')
+
+    # Configurar etiquetas y título
+    plt.xlabel('Cantidad de Episodios')
+    plt.ylabel('Promedio de Turnos')
+    plt.title('Relación entre Cantidad de Episodios y Promedio de Turnos')
+    plt.grid(True)
+
+    # Mostrar el gráfico
+    plt.show()
 
 if __name__ == "__main__":
     # Llamar a la función principal con los argumentos proporcionados
