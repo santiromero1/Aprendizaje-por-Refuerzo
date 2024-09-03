@@ -112,9 +112,9 @@ class AgenteQLearning:
         """Inicializa un agente de Q-learning."""
         self.ambiente = ambiente
         self.estado = EstadoDiezMil()
-        self.alpha = 0.1
-        self.gamma = 0.9
-        self.epsilon = 0.1
+        self.alpha = 0.1 #nose?
+        self.gamma = 0.9 #tiene muy en cuenta el rweard de haber hecho dicha accion
+        self.epsilon = 0.1 #10% veces va a hacer random
         self.q_table = defaultdict(lambda: [0.0, 0.0])
     
     def elegir_accion(self, dados):
@@ -220,7 +220,7 @@ class JugadorEntrenado(Jugador):
         (puntaje, dados_a_tirar) = puntaje_y_no_usados(dados)
         # print(tuple(sorted(dados)))
         # print(self.politica['(1, 3, 4, 4, 5, 5)'])
-        accion_idx = self.politica[str(tuple(sorted(dados)))]
+        accion_idx = self.politica.get(str(tuple(sorted(dados))),0)
         
         if accion_idx == 0:
             accion = JUGADA_PLANTARSE

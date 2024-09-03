@@ -15,7 +15,7 @@ def jugar_partidas(jugador, num_juegos=100, verbose=False):
     return promedio_turnos
 
 def main():
-    num_juegos = 10000
+    num_juegos = 1000
 
     # Jugador Aleatorio
     jugador_random = JugadorAleatorio('random')
