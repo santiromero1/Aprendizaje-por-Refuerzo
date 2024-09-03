@@ -25,30 +25,29 @@ def main():
     jugador_planton = JugadorSiempreSePlanta('planton')
     promedio_planton = jugar_partidas(jugador_planton, num_juegos, verbose=False)
 
-    # Jugador Entrenado
-    jugador_entrenado = JugadorEntrenado('QLearn_100.000eps', 'politica_100000.csv')
-    promedio_entrenado = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
+    def jugar_y_obtener_promedios(jugadores, num_juegos=1000):
+        promedios = {}
+        
+        for nombre, politica in jugadores:
+            jugador_entrenado = JugadorEntrenado(nombre, politica)
+            promedio = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
+            promedios[nombre] = promedio
+        
+        return promedios
 
-    # Jugador Entrenado
-    jugador_entrenado = JugadorEntrenado('QLearn_10.000eps', 'politica_10000.csv')
-    promedio_entrenado = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
+    # Lista de jugadores entrenados con sus correspondientes políticas
+    jugadores_entrenados = [
+        ('QLearn_100eps', 'politica_50.csv'),
+        ('QLearn_100eps', 'politica_100.csv'),
+        ('QLearn_1000eps', 'politica_1000.csv'),
+        ('QLearn_10000eps', 'politica_10000.csv'),
+        # ('QLearn_100000eps', 'politica_100000.csv'),
+        # ('QLearn_500.000eps', 'politica_500000.csv')
+    ]
 
-    # # Imprimir resultados finales
-    # print(f'Promedio de turnos para {num_juegos} juegos:')
-    # print(f'{jugador_random.nombre}: {promedio_random}')
-    # print(f'{jugador_planton.nombre}: {promedio_planton}')
-    # print(f'{jugador_entrenado.nombre}: {promedio_entrenado}')
+    # Ejecutar la función y obtener los promedios
+    promedios = jugar_y_obtener_promedios(jugadores_entrenados, num_juegos=1000)
 
 if __name__ == "__main__":
     # Llamar a la función principal con los argumentos proporcionados
     main()
-
-    # parser = argparse.ArgumentParser(description="Jugar una partida de 'Diez Mil' con un agente entrenado usando una política predefinida.")
-
-    # # Agregar argumentos
-    # parser.add_argument('-f', '--politica_filename', type=str, help='Archivo con la política entrenada')
-    # parser.add_argument('-v', '--verbose', action='store_true', help='Activar modo verbose para ver más detalles durante el juego')
-
-    # # Parsear los argumentos
-    # args = parser.parse_args()
-
