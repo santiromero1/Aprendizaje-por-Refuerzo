@@ -11,33 +11,36 @@ from collections import Counter
 # estado = es un turno dentro del juego
 # step = una tirada de dados
 
-class AmbienteDiezMil:
+# class AmbienteDiezMil:
     
-    def __init__(self): # por juego
-        """Definir las variables de instancia de un ambiente.
-        ¿Qué es propio de un ambiente de 10.000?
-        """
-        self.puntaje_total = 0
-        self.cantidad_turnos = 0
+#     def __init__(self): # por juego
+#         """Definir las variables de instancia de un ambiente.
+#         ¿Qué es propio de un ambiente de 10.000?
+#         """
+#         self.puntaje_total = 0
+#         self.cantidad_turnos = 0
     
-    def reset(self): # por turno
-        """Reinicia el ambiente para volver a realizar un episodio.
-        """
-        self.puntaje_total = 0
-        self.cantidad_turnos = 0
+#     def reset(self): # por turno
+#         """Reinicia el ambiente para volver a realizar un episodio.
+#         """
+#         self.puntaje_total = 0
+#         self.cantidad_turnos = 0
 
-class EstadoDiezMil(AmbienteDiezMil):
+class DiezMil():
     def __init__(self):
         """Inicializa un estado de DiezMil, es decir, un turno."""
-        super().__init__()  # Llama al constructor de la clase padre
+        # super().__init__()  # Llama al constructor de la clase padre
+        self.puntaje_total = 0 # cantidad de turnos en el entrenar()
         self.puntaje_turno = 0
         self.dados = [randint(1, 6) for _ in range(6)]  # Inicializa los dados para este turno
         self.turno_terminado = False
 
+    def reset_juego(self):
+        self.puntaje_total = 0 
+
     def reset_turno(self):
         """Modifica el estado al terminar el turno."""
         self.puntaje_turno = 0
-        self.cantidad_turnos += 1
         self.dados = [randint(1, 6) for _ in range(6)]
         self.turno_terminado = False
 
@@ -93,10 +96,9 @@ class EstadoDiezMil(AmbienteDiezMil):
         return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}, #Turnos: {self.cantidad_turnos}"   
 
 class AgenteQLearning:
-    def __init__(self, ambiente: AmbienteDiezMil, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Inicializa un agente de Q-learning."""
-        self.ambiente = ambiente
-        self.estado = EstadoDiezMil()
+        self.estado = DiezMil()
         self.alpha = 0.6 
         self.gamma = 0.9 #tiene muy en cuenta el rweard de haber hecho dicha accion
         self.epsilon = 0.55 #10% veces va a hacer random
@@ -119,7 +121,7 @@ class AgenteQLearning:
         """Dada una cantidad de episodios (cantidad de juegos diezmil),
            se repite el ciclo del algoritmo de Q-learning."""
         for episodio in tqdm(range(episodios), desc="Entrenando al Agente Q-Learning"):
-            self.estado.reset()
+            self.estado.reset_juego()
             while self.estado.puntaje_total <= 10000:
                 tirada = 0
                 while not self.estado.turno_terminado: # mientras no haya terminado el turno (turno_terinado = False)
@@ -150,13 +152,11 @@ class AgenteQLearning:
                     self.q_table[estado_actual][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[estado_actual][accion])
                     
                     # print para seguir el turno 
-                    print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
+                    # print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
 
                 #puntos turno = 0, 6 nuevos dados random y turno terminado = False
                 self.estado.reset_turno()
                 
-
-
     def guardar_politica(self, filename: str):
         """Almacena la política del agente en un archivo CSV."""
         with open(filename, 'w', newline='') as file:
