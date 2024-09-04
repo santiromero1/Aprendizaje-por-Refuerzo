@@ -16,10 +16,10 @@ def jugar_partidas(jugador, num_juegos=100, verbose=False):
 
 def main():
     # Lista de episodios para los diferentes archivos
-    episodios = [10, 50, 100, 200, 500, 1000, 5000, 10000, 75000] #,, 100000
+    episodios = [1000,10000,50000,75000,100000,500000]
 
     # Número de juegos a jugar
-    num_juegos = 100  # Ajusta este valor según lo necesites
+    num_juegos = 10000  # Ajusta este valor según lo necesites
 
     # Listas para almacenar los resultados
     x_values = []
@@ -35,14 +35,14 @@ def main():
         promedio_entrenado = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
 
         # Guarda los valores para el plot
-        x_values.append(episodio * 1000)  # Para representar la cantidad real de episodios
+        x_values.append(episodio)  # Para representar la cantidad real de episodios
         y_values.append(promedio_entrenado)
     # Crear el plot
     plt.figure(figsize=(10, 6))
     plt.plot(x_values, y_values, marker='o', linestyle='-', color='b', label='Promedio de turnos por episodio')
     plt.xlabel('Número de episodios')
-    plt.ylabel('Promedio de turnos para ganar')
-    plt.title('Rendimiento del Agente Q-Learning en 10 Mil')
+    plt.ylabel('Promedio de turnos para ganar en 10.000 juegos')
+    plt.title('Rendimiento del Agente Q-Learning en el juego 10 Mil')
     plt.legend()
     plt.grid(True)
     plt.show()
