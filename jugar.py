@@ -37,10 +37,10 @@ def main():
 
     # Lista de jugadores entrenados con sus correspondientes políticas
     jugadores_entrenados = [
-        ('QLearn_100eps', 'politica_50.csv'),
+        ('QLearn_50eps', 'politica_50.csv'),
         ('QLearn_100eps', 'politica_100.csv'),
         ('QLearn_1000eps', 'politica_1000.csv'),
-        ('QLearn_10000eps', 'politica_10000.csv'),
+        # ('QLearn_10000eps', 'politica_10000.csv'),
         # ('QLearn_100000eps', 'politica_100000.csv'),
         # ('QLearn_500.000eps', 'politica_500000.csv')
     ]

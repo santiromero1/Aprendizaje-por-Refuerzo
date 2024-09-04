@@ -54,7 +54,7 @@ class EstadoDiezMil(AmbienteDiezMil):
         """
         reward = 0 # recompensa por tirada, lo queremos usar para que el agente aprenda
         (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(dados)
-        if puntaje_tirada == 0:
+        if puntaje_tirada == 0 and accion == JUGADA_TIRAR:
             reward = -self.puntaje_turno
             self.puntaje_turno = 0
             self.turno_terminado = True
@@ -69,7 +69,7 @@ class EstadoDiezMil(AmbienteDiezMil):
                 self.puntaje_turno += puntaje_tirada
                 self.puntaje_total += self.puntaje_turno
                 self.turno_terminado = True
-                reward = self.puntaje_turno
+                reward = puntaje_tirada
     
         return reward, dados_a_tirar
     
@@ -113,9 +113,9 @@ class AgenteQLearning:
             self.estado.reset()
             contador_episodio += 1
             while self.estado.puntaje_total <= 10000:
-                # tirada = 0
+                tirada = 0
                 while not self.estado.turno_terminado: # mientras no haya terminado el turno (turno_terinado = False)
-                    # tirada += 1
+                    tirada += 1
                     accion = self.elegir_accion(self.estado.dados,self.estado.puntaje_turno) # 1(TIRAR) o 0(PLANTARSE)
                     dados = self.estado.dados # Guardar los dados 
                     cant_dados_actual = len(dados)
@@ -126,7 +126,7 @@ class AgenteQLearning:
                     max_q = float(np.max(self.q_table[estado_futuro])) # error, estamos guardadno el max del estado sin importar la acccion, eotnces cuando cambie la tabla, etonces lso dos estados van a tener lo mismo q_max => la ecuacion es lo mismo para los dos estados.
                     self.q_table[estado_actual][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[estado_actual][accion])
                     
-                    print(f'estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, estado_futuro: {estado_futuro}, reward: {reward}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
+                    print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, estado_futuro: {estado_futuro}, reward: {reward}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
 
                     if len(dados_a_tirar) == 0: #vimso que si juega tirar y no tenia dadoa a tirar iba a crear un estado con Q negativa a tirar (no queremos este estado)
                         break
@@ -188,7 +188,7 @@ class JugadorEntrenado(Jugador):
         (puntaje, dados_a_tirar) = puntaje_y_no_usados(dados)
         # print(tuple(sorted(dados)))
         # print(self.politica['(1, 3, 4, 4, 5, 5)'])
-        accion_idx = self.politica.get(str(tuple(sorted(dados))),0)
+        accion_idx = self.politica.get(f'({len(dados)}, {puntaje_turno})', 1)
         
         if accion_idx == 0:
             accion = JUGADA_PLANTARSE
