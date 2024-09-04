@@ -140,7 +140,7 @@ class AgenteQLearning:
                     #me guardo el estado futuro segun la accion
                     (puntaje_tirada_futura, _) = puntaje_y_no_usados(self.estado.dados) #aca algo me hace ruido (si se planta el estado futuro usa los mimos dados. Esta guardadno un puntaje futuro que no es (6,0))
                     if accion == JUGADA_TIRAR:
-                        estado_futuro  = (len(dados_a_tirar),self.estado.puntaje_turno+puntaje_tirada_futura)
+                        estado_futuro  = (len(self.estado.dados),self.estado.puntaje_turno+puntaje_tirada_futura)
                     else:
                         # estado_futuro  = (len(dados_a_tirar),self.estado.puntaje_turno)
                         estado_futuro  = (6,0)
@@ -150,7 +150,7 @@ class AgenteQLearning:
                     self.q_table[estado_actual][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[estado_actual][accion])
                     
                     # print para seguir el turno 
-                    # print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
+                    print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
 
                 #puntos turno = 0, 6 nuevos dados random y turno terminado = False
                 self.estado.reset_turno()
