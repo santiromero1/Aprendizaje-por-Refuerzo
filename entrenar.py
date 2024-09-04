@@ -17,7 +17,7 @@ def main(episodios, verbose):
 if __name__ == '__main__':
     # Crear un analizador de argumentos
     parser = argparse.ArgumentParser(description="Entrenar un agente usando Q-learning en el ambiente de 'Diez Mil'.")
-    episodios = [10, 50, 100, 200, 500, 1000, 5000, 10000, 50000, 75000, 100000]
+    episodios = [10, 50, 100, 200, 500, 1000, 5000,10000,75000] #, 50000, 100000
     for episodio in episodios:
         # Agregar argumentos
         # parser.add_argument('-e', '--episodios', type=int, default=1000, help='Número de episodios para entrenar al agente (default: 10000)')

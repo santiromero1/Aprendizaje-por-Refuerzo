@@ -16,10 +16,10 @@ def jugar_partidas(jugador, num_juegos=100, verbose=False):
 
 def main():
     # Lista de episodios para los diferentes archivos
-    episodios = [10, 50, 100, 200, 500, 1000, 5000, 10000, 50000, 75000, 100000]
+    episodios = [10, 50, 100, 200, 500, 1000, 5000, 10000, 75000] #,, 100000
 
     # Número de juegos a jugar
-    num_juegos = 1000  # Ajusta este valor según lo necesites
+    num_juegos = 100  # Ajusta este valor según lo necesites
 
     # Listas para almacenar los resultados
     x_values = []
@@ -37,31 +37,15 @@ def main():
         # Guarda los valores para el plot
         x_values.append(episodio * 1000)  # Para representar la cantidad real de episodios
         y_values.append(promedio_entrenado)
-
-
-    def jugar_y_obtener_promedios(jugadores, num_juegos=1000):
-        promedios = {}
-        
-        for nombre, politica in jugadores:
-            jugador_entrenado = JugadorEntrenado(nombre, politica)
-            promedio = jugar_partidas(jugador_entrenado, num_juegos, verbose=False)
-            promedios[nombre] = promedio
-        
-        return promedios
-
-    # Lista de jugadores entrenados con sus correspondientes políticas
-    jugadores_entrenados = [
-        ('QLearn_50eps', 'politica_50.csv'),
-        ('QLearn_100eps', 'politica_100.csv'),
-        ('QLearn_1000eps', 'politica_1000.csv'),
-        # ('QLearn_10000eps', 'politica_10000.csv'),
-        # ('QLearn_100000eps', 'politica_100000.csv'),
-        # ('QLearn_500.000eps', 'politica_500000.csv')
-    ]
-
-    # Ejecutar la función y obtener los promedios
-    promedios = jugar_y_obtener_promedios(jugadores_entrenados, num_juegos=1000)
-
+    # Crear el plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_values, y_values, marker='o', linestyle='-', color='b', label='Promedio de turnos por episodio')
+    plt.xlabel('Número de episodios')
+    plt.ylabel('Promedio de turnos para ganar')
+    plt.title('Rendimiento del Agente Q-Learning en 10 Mil')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 if __name__ == "__main__":
     # Llamar a la función principal con los argumentos proporcionados

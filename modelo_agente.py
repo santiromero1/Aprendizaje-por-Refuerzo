@@ -71,7 +71,8 @@ class EstadoDiezMil(AmbienteDiezMil):
 
 
                 self.turno_terminado = True
-                reward = puntaje_tirada
+                reward = self.puntaje_turno
+                # reward = puntaje_tirada
     
         return reward, dados_a_tirar
     
@@ -89,13 +90,13 @@ class AgenteQLearning:
         """Inicializa un agente de Q-learning."""
         self.ambiente = ambiente
         self.estado = EstadoDiezMil()
-        self.alpha = 0.1 #nose?
+        self.alpha = 0.6 
         self.gamma = 0.9 #tiene muy en cuenta el rweard de haber hecho dicha accion
-        self.epsilon = 0.5 #10% veces va a hacer random
-        self.epsilon_decay = 0.9
-        self.q_table = defaultdict(lambda: [0.0, 1.0])    
+        self.epsilon = 0.55 #10% veces va a hacer random
+        self.epsilon_decay = 0.995
+        self.q_table = defaultdict(lambda: [0.0, 1.0]) 
+           
     def elegir_accion(self, dados,puntaje_actual):
-
         """Selecciona una acción de acuerdo a una política ε-greedy."""
         if np.random.rand() < self.epsilon:
             self.epsilon *= self.epsilon_decay
@@ -119,20 +120,26 @@ class AgenteQLearning:
                 tirada = 0
                 while not self.estado.turno_terminado: # mientras no haya terminado el turno (turno_terinado = False)
                     tirada += 1
-                    accion = self.elegir_accion(self.estado.dados,self.estado.puntaje_turno) # 1(TIRAR) o 0(PLANTARSE)
-                    dados = self.estado.dados # Guardar los dados 
+                    dados = self.estado.dados
+                    (puntaje_tirada, _) = puntaje_y_no_usados(dados)
+                    accion = self.elegir_accion(dados,self.estado.puntaje_turno+puntaje_tirada)
                     cant_dados_actual = len(dados)
-                    puntos_actual = self.estado.puntaje_turno
+                    puntos_actual = self.estado.puntaje_turno + puntaje_tirada
+                    if len(_)== 0 and accion == JUGADA_TIRAR : 
+                        accion = JUGADA_PLANTARSE
                     reward, dados_a_tirar = self.estado.step(accion, dados) # Realizar la acción y obtener la recompensa
                     estado_actual = (cant_dados_actual, puntos_actual)
-                    estado_futuro  = (len(dados_a_tirar),self.estado.puntaje_turno)
-                    max_q = float(np.max(self.q_table[estado_futuro])) # error, estamos guardadno el max del estado sin importar la acccion, eotnces cuando cambie la tabla, etonces lso dos estados van a tener lo mismo q_max => la ecuacion es lo mismo para los dos estados.
+                    (puntaje_tirada_futura, _) = puntaje_y_no_usados(self.estado.dados)
+                    if accion == JUGADA_TIRAR:
+                        estado_futuro  = (len(dados_a_tirar),self.estado.puntaje_turno+puntaje_tirada_futura)
+                    else:
+                        # estado_futuro  = (len(dados_a_tirar),self.estado.puntaje_turno)
+                        estado_futuro  = (6,0)
+                    max_q = float(np.max(self.q_table[estado_futuro])) 
                     self.q_table[estado_actual][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[estado_actual][accion])
                     
-                    print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, estado_futuro: {estado_futuro}, reward: {reward}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
+                    # print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
 
-                    if len(dados_a_tirar) == 0: #vimso que si juega tirar y no tenia dadoa a tirar iba a crear un estado con Q negativa a tirar (no queremos este estado)
-                        break
                 self.estado.reset_turno()
             self.epsilon *= self.epsilon_decay
             if verbose and (episodio + 1) % 100 == 0:
@@ -191,7 +198,7 @@ class JugadorEntrenado(Jugador):
         (puntaje, dados_a_tirar) = puntaje_y_no_usados(dados)
         # print(tuple(sorted(dados)))
         # print(self.politica['(1, 3, 4, 4, 5, 5)'])
-        accion_idx = self.politica.get(f'({len(dados)}, {puntaje_turno})', 1)
+        accion_idx = self.politica.get(f'({len(dados)}, {puntaje_turno+puntaje})', 1)
         
         if accion_idx == 0:
             accion = JUGADA_PLANTARSE
