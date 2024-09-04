@@ -68,6 +68,8 @@ class EstadoDiezMil(AmbienteDiezMil):
             elif accion == JUGADA_PLANTARSE or len(dados_a_tirar) == 0:
                 self.puntaje_turno += puntaje_tirada
                 self.puntaje_total += self.puntaje_turno
+
+
                 self.turno_terminado = True
                 reward = puntaje_tirada
     
@@ -93,6 +95,7 @@ class AgenteQLearning:
         self.epsilon_decay = 0.9
         self.q_table = defaultdict(lambda: [0.0, 1.0])    
     def elegir_accion(self, dados,puntaje_actual):
+
         """Selecciona una acción de acuerdo a una política ε-greedy."""
         if np.random.rand() < self.epsilon:
             self.epsilon *= self.epsilon_decay
@@ -131,7 +134,7 @@ class AgenteQLearning:
                     if len(dados_a_tirar) == 0: #vimso que si juega tirar y no tenia dadoa a tirar iba a crear un estado con Q negativa a tirar (no queremos este estado)
                         break
                 self.estado.reset_turno()
-                
+            self.epsilon *= self.epsilon_decay
             if verbose and (episodio + 1) % 100 == 0:
                 print(f"Episodio {episodio + 1}/{episodios} completado. Puntaje Total: {self.ambiente.puntaje_total}")
                 
