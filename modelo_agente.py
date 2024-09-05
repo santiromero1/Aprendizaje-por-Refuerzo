@@ -7,7 +7,7 @@ from random import randint
 import csv
 from collections import Counter
 
-# episodio = un juego entero de diezmil (con reset() se reinicia el juego)
+# episodio = un ambiente = un juego entero de diezmil (con reset() se reinicia el juego)
 # estado = es un turno dentro del juego
 # step = una tirada de dados
 
@@ -74,7 +74,7 @@ class EstadoDiezMil(AmbienteDiezMil):
                 reward = puntaje_tirada
 
             #caso en el que se planta --> se actualiza el puntaje total y se termina el turno
-            elif accion == JUGADA_PLANTARSE or len(dados_a_tirar) == 0:
+            elif accion == JUGADA_PLANTARSE:
                 self.puntaje_turno += puntaje_tirada
                 self.puntaje_total += self.puntaje_turno
                 self.turno_terminado = True
@@ -150,7 +150,7 @@ class AgenteQLearning:
                     self.q_table[estado_actual][accion] += self.alpha * (reward + self.gamma * max_q - self.q_table[estado_actual][accion])
                     
                     # print para seguir el turno 
-                    print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
+                    # print(f'tirada {tirada} estado_actual: {estado_actual}, accion: {JUGADAS_STR[accion]}, reward: {reward}, estado_futuro: {estado_futuro}, max_q: {max_q}, q_table: {self.q_table[estado_actual]}')
 
                 #puntos turno = 0, 6 nuevos dados random y turno terminado = False
                 self.estado.reset_turno()
