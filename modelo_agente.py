@@ -128,21 +128,21 @@ class AgenteQLearning:
                     tirada += 1
                     # me guardo el estado actual (podriamos hacer que get estado sea esto)
                     dados_actual = self.estado.dados
-                    (puntaje_tirada, _) = puntaje_y_no_usados(dados_actual)
+                    (puntaje_tirada, dados_a_tirar_actual) = puntaje_y_no_usados(dados_actual)
                     puntos_actual = self.estado.puntaje_turno + puntaje_tirada
-                    cant_dados_actual = len(dados_actual)
-                    estado_actual = (cant_dados_actual, puntos_actual)
+                    cant_dados_a_tirar_actual = len(dados_a_tirar_actual)
+                    estado_actual = (cant_dados_a_tirar_actual, puntos_actual)
 
                     #eligo accion con estado actual
                     accion = self.elegir_accion(dados_actual,puntos_actual)
                     
-                    #realizamos la accion y obtenemos la recompensa (se actualizan los puntos turno y puntos totales)
-                    reward, dados_a_tirar = self.estado.step(accion, dados_actual) 
+                    #realizamos la accion y obtenemos la recompensa (se actualizan los dados, los puntos turno y puntos totales)
+                    reward, dados_a_tirar_actual = self.estado.step(accion, dados_actual) 
 
                     #me guardo el estado futuro segun la accion
-                    (puntaje_tirada_futura, _) = puntaje_y_no_usados(self.estado.dados) #aca algo me hace ruido (si se planta el estado futuro usa los mimos dados. Esta guardadno un puntaje futuro que no es (6,0))
+                    (puntaje_tirada_futura, dados_a_tirar_futuro) = puntaje_y_no_usados(self.estado.dados) #no son dados_a_tirar_actual porque no estan randomizados, los agarro desde self.estado.dados para que sean nuevos (son del mismo len igual)
                     if accion == JUGADA_TIRAR:
-                        estado_futuro  = (len(self.estado.dados),self.estado.puntaje_turno+puntaje_tirada_futura)
+                        estado_futuro  = (len(dados_a_tirar_futuro),self.estado.puntaje_turno+puntaje_tirada_futura)
                     else:
                         # estado_futuro  = (len(dados_a_tirar),self.estado.puntaje_turno)
                         estado_futuro  = (6,0)
@@ -166,7 +166,7 @@ class AgenteQLearning:
             for tuple, valores_q in self.q_table.items():
                 writer.writerow([tuple, valores_q[0], valores_q[1]])
 
-        print(f"Política guardada en {filename}")
+        print(f"Politica guardada en {filename}")
 
 class JugadorEntrenado(Jugador):
     def __init__(self, nombre: str, filename_politica: str):
@@ -206,7 +206,7 @@ class JugadorEntrenado(Jugador):
     def jugar(self, puntaje_total:int, puntaje_turno:int, dados:list[int],
               verbose:bool=False) -> tuple[int,list[int]]:
         (puntaje, dados_a_tirar) = puntaje_y_no_usados(dados)
-        accion_idx = self.politica.get(f'({len(dados)}, {puntaje_turno+puntaje})', 1)
+        accion_idx = self.politica.get(f'({len(dados_a_tirar)}, {puntaje_turno+puntaje})', 1)
         
         if accion_idx == 0:
             accion = JUGADA_PLANTARSE
@@ -215,16 +215,5 @@ class JugadorEntrenado(Jugador):
 
         return accion, dados_a_tirar
     
-
-
-
-
-"""
-[111622] = 1000 _>tirar
-544 = 1050 -> plantarse
-6,0 
-"""
-
-
 
     
