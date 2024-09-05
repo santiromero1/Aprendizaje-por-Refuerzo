@@ -11,25 +11,10 @@ from collections import Counter
 # estado = es un turno dentro del juego
 # step = una tirada de dados
 
-# class AmbienteDiezMil:
-    
-#     def __init__(self): # por juego
-#         """Definir las variables de instancia de un ambiente.
-#         ¿Qué es propio de un ambiente de 10.000?
-#         """
-#         self.puntaje_total = 0
-#         self.cantidad_turnos = 0
-    
-#     def reset(self): # por turno
-#         """Reinicia el ambiente para volver a realizar un episodio.
-#         """
-#         self.puntaje_total = 0
-#         self.cantidad_turnos = 0
 
 class DiezMil():
     def __init__(self):
         """Inicializa un estado de DiezMil, es decir, un turno."""
-        # super().__init__()  # Llama al constructor de la clase padre
         self.puntaje_total = 0 # cantidad de turnos en el entrenar()
         self.puntaje_turno = 0
         self.dados = [randint(1, 6) for _ in range(6)]  # Inicializa los dados para este turno
@@ -58,25 +43,25 @@ class DiezMil():
         reward = 0 # recompensa por tirada, lo queremos usar para que el agente aprenda
         (puntaje_tirada, dados_a_tirar) = puntaje_y_no_usados(dados)
         
-        #caso en el que eligio tirar y no gano nada --> RESET y penalizacion
+        #caso en el que eligio tirar y no gano nada --> RESET y penalizacion --> reward es una penalizacion (a mayor puntaje, mayor es la penalizacion)
         if puntaje_tirada == 0 and accion == JUGADA_TIRAR:
             reward = -self.puntaje_turno
             self.puntaje_turno = 0
             self.turno_terminado = True
         else:
-            #caso en el que tira --> se actualiza el puntaje del turno y se tiran los dados
+            #caso en el que tira --> se actualiza el puntaje del turno y se tiran los dados --> reward es la tirada
             if accion == JUGADA_TIRAR:
                 self.puntaje_turno += puntaje_tirada
                 #si sumo con todos, consiguio otra tirada y sigue
                 if len(dados_a_tirar) == 0 :
                     self.dados = [randint(1, 6) for _ in range(6)] 
-               #si no tiro con los que le quedan
+               #si no, tiro con los que le quedan
                 else: 
                     self.dados = [randint(1, 6) for _ in range(len(dados_a_tirar))] 
                 self.turno_terminado = False
                 reward = puntaje_tirada
 
-            #caso en el que se planta --> se actualiza el puntaje total y se termina el turno
+            #caso en el que se planta --> se actualiza el puntaje total y se termina el turno --> reward es el puntaje de turno (lo premio si se planta con muchos)
             elif accion == JUGADA_PLANTARSE:
                 self.puntaje_turno += puntaje_tirada
                 self.puntaje_total += self.puntaje_turno
@@ -93,27 +78,26 @@ class DiezMil():
         Returns:
             str: Representación en texto de EstadoDiezMil.
         """
-        return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}, #Turnos: {self.cantidad_turnos}"   
+        return f"Total: {self.puntaje_total}, Turno: {self.puntaje_turno}, Dados: {self.dados}"   
 
 class AgenteQLearning:
     def __init__(self, *args, **kwargs):
         """Inicializa un agente de Q-learning."""
         self.estado = DiezMil()
-        self.alpha = 0.6 
-        self.gamma = 0.9 #tiene muy en cuenta el rweard de haber hecho dicha accion
-        self.epsilon = 0.55 #10% veces va a hacer random
+        self.alpha = 0.8 #lr bajo para contrar
+        self.gamma = 0.9 #tiene muy en cuenta el max_q del estado futuro
+        self.epsilon = 0.8 #55% veces va a hacer random
         self.epsilon_decay = 0.995
         self.q_table = defaultdict(lambda: [0.0, 1.0]) 
            
-    def elegir_accion(self, dados,puntaje_actual):
+    def elegir_accion(self, estado_actual):
         """Selecciona una acción de acuerdo a una política ε-greedy."""
         if np.random.rand() < self.epsilon:
-            self.epsilon *= self.epsilon_decay
+            # self.epsilon *= self.epsilon_decay
             accion = np.random.choice([JUGADA_PLANTARSE, JUGADA_TIRAR]) # random entre JUGADA_PLANTARSE o JUGADA_TIRAR
             return [JUGADA_PLANTARSE, JUGADA_TIRAR].index(accion) #devuelve la poscion donde esta accion
         else:
-            estado = (len(dados), puntaje_actual)
-            return np.argmax(self.q_table[estado])
+            return np.argmax(self.q_table[estado_actual])
          # accede a los valores de Q almacenados para dados y devuelve el reward maximo entre las dos acciones
                                                          # si los dos valores son iguales, devuelve 0 (plantarse)
                                                          
@@ -126,21 +110,21 @@ class AgenteQLearning:
                 tirada = 0
                 while not self.estado.turno_terminado: # mientras no haya terminado el turno (turno_terinado = False)
                     tirada += 1
-                    # me guardo el estado actual (podriamos hacer que get estado sea esto)
+
+                    # me guardo el estado actual (cantidad de dados y puntaje turno+tirada)
                     dados_actual = self.estado.dados
                     (puntaje_tirada, dados_a_tirar_actual) = puntaje_y_no_usados(dados_actual)
                     puntos_actual = self.estado.puntaje_turno + puntaje_tirada
-                    cant_dados_a_tirar_actual = len(dados_a_tirar_actual)
-                    estado_actual = (cant_dados_a_tirar_actual, puntos_actual)
+                    estado_actual = (len(dados_a_tirar_actual), puntos_actual) # nos importa la cantidad de dados a tirar, no sus valores.
 
-                    #eligo accion con estado actual
-                    accion = self.elegir_accion(dados_actual,puntos_actual)
+                    #elijo la accion segun el estado actual
+                    accion = self.elegir_accion(estado_actual)
                     
                     #realizamos la accion y obtenemos la recompensa (se actualizan los dados, los puntos turno y puntos totales)
                     reward, dados_a_tirar_actual = self.estado.step(accion, dados_actual) 
 
-                    #me guardo el estado futuro segun la accion
-                    (puntaje_tirada_futura, dados_a_tirar_futuro) = puntaje_y_no_usados(self.estado.dados) #no son dados_a_tirar_actual porque no estan randomizados, los agarro desde self.estado.dados para que sean nuevos (son del mismo len igual)
+                    #me guardo el estado futuro segun la accion tomada.
+                    (puntaje_tirada_futura, dados_a_tirar_futuro) = puntaje_y_no_usados(self.estado.dados) #no use dados_a_tirar_actual porque no estan randomizados, los agarro desde self.estado.dados para que sean nuevos (son del mismo len igual)
                     if accion == JUGADA_TIRAR:
                         estado_futuro  = (len(dados_a_tirar_futuro),self.estado.puntaje_turno+puntaje_tirada_futura)
                     else:
@@ -156,6 +140,7 @@ class AgenteQLearning:
 
                 #puntos turno = 0, 6 nuevos dados random y turno terminado = False
                 self.estado.reset_turno()
+                self.epsilon *= self.epsilon_decay
                 
     def guardar_politica(self, filename: str):
         """Almacena la política del agente en un archivo CSV."""

@@ -16,7 +16,7 @@ def jugar_partidas(jugador, num_juegos=100, verbose=False):
 
 def main():
     # Lista de episodios para los diferentes archivos
-    episodios = [10,100,1000,5000,10000,25000,75000,100000,250000]
+    episodios = [10,100,500,1000,5000,10000,25000,50000,75000,100000,150000,175000,250000,500000, 1000000] 
 
     # Número de juegos a jugar
     num_juegos = 10000  # Ajusta este valor según lo necesites
@@ -37,6 +37,28 @@ def main():
         # Guarda los valores para el plot
         x_values.append(episodio)  # Para representar la cantidad real de episodios
         y_values.append(promedio_entrenado)
+    
+    aux_cant_turnos_planton = 0
+    aux_cant_turnos_random = 0
+    for jueguito in range(num_juegos):
+        
+        jugador = JugadorSiempreSePlanta("palton")
+        juego = JuegoDiezMil(jugador)
+        cantidad_turnos, _ = juego.jugar(verbose=False)
+        aux_cant_turnos_planton += cantidad_turnos
+
+        jugador = JugadorAleatorio("random")
+        juego = JuegoDiezMil(jugador)
+        cantidad_turnos, _ = juego.jugar(verbose=False)
+        aux_cant_turnos_random += cantidad_turnos
+    
+    promedio_planton = aux_cant_turnos_planton / num_juegos
+    promedio_random = aux_cant_turnos_random / num_juegos
+    
+    print(f'Promedio en {num_juegos} juegos de JugadorSiempreSePlanta es {promedio_planton} turnos.')
+    print(f'Promedio en {num_juegos} juegos de JugadorAleatorio es {promedio_random} turnos.')
+
+
 
     # Crear el plot
     plt.figure(figsize=(10, 6))
