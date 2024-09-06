@@ -16,7 +16,7 @@ def jugar_partidas(jugador, num_juegos=100, verbose=False):
 
 def main():
     # Lista de episodios para los diferentes archivos
-    episodios = [10,100,500,1000,5000,10000,25000,50000,75000,100000,150000,175000,250000,500000, 1000000] 
+    episodios = [10,100,1000,5000,10000,25000,75000,100000,150000,250000] 
 
     # Número de juegos a jugar
     num_juegos = 10000  # Ajusta este valor según lo necesites
@@ -28,7 +28,7 @@ def main():
     # Itera sobre la lista de episodios
     for episodio in episodios:
         nombre = f'agente_{episodio}eps'
-        archivo = f'politica_{episodio}.csv'
+        archivo = f'./22_definitivo/politica_{episodio}.csv'
 
         # Jugador Entrenado
         jugador_entrenado = JugadorEntrenado(nombre, archivo)
@@ -70,6 +70,10 @@ def main():
     # Añadir etiquetas sobre cada punto con el valor del promedio
     for x, y in zip(x_values, y_values):
         plt.text(x, y+0.02, f'{y:.2f}', fontsize=10, ha='center', va='bottom')
+    
+    # Añadir líneas horizontales para el promedio del JugadorSiempreSePlanta y JugadorAleatorio
+    plt.axhline(y=promedio_planton, color='green', linestyle='-', linewidth=1, label='Promedio SiempreSePlanta')
+    plt.axhline(y=promedio_random, color='red', linestyle='-', linewidth=1, label='Promedio Aleatorio')
 
     # Configuración del gráfico
     plt.xlabel('Número de episodios')
