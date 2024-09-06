@@ -134,7 +134,6 @@ class AgenteQLearning:
 
                 #puntos turno = 0, 6 nuevos dados random y turno terminado = False
                 self.estado.reset_turno()
-                self.epsilon *= self.epsilon_decay
                 
     def guardar_politica(self, filename: str):
         """Almacena la política del agente en un archivo CSV."""
